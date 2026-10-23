@@ -16,15 +16,15 @@ DIRECTIONS = {
     Direction.SE: (1, 1),
     Direction.SW: (1, -1),
     Direction.W:  (0, -2),
-    Direction.NE: (-1, 1),
-    Direction.NW: (-1, -1),
+    Direction.NE: (-1, -1),
+    Direction.NW: (-1, 1),
 }
 
 
 class HexBoard:
     """Hexagonal board stored as a contiguous one-byte-per-character matrix."""
 
-    VALID_CELLS = set("OM123456")
+    VALID_CELLS = set("OMPLNQWERTYUIOPASDFGHJKLZXCVBNM123456")
 
     def __init__(self, rows):
         self.height = len(rows)
@@ -87,8 +87,9 @@ class HexBoard:
 
 
 def simulate_laser(board, direction, start):
-    """Trace one laser, updating O/P/M cells in place."""
+    """Return the cells reached by one laser."""
     r, c = start
+    cells = []
 
     while True:
         next_cell = board.move(r, c, direction)
@@ -97,31 +98,27 @@ def simulate_laser(board, direction, start):
             break
 
         r, c = next_cell
-        cell = board.get(r, c)
+        cells.append((r, c))
 
-        print(cell)
-        if cell is "O":
-            board.set(r, c, "P")
-        elif cell is "P":
-            print("rewrite")
-            board.set(r, c, "M")
-        elif cell is "M":
-            board.set(r, c, "L")
-        elif cell is "L":
-            board.set(r, c, "L")
+    return cells
 
 
 def process_board(board):
-    """Process all emitters, then restore temporary P cells to O."""
-    for r, c, direction in board.emitters():
-        print(r, c, direction)
-        simulate_laser(board, direction, (r, c))
+    """Apply matter creation and destruction where beams intersect."""
+    hits = {}
 
-    for r in range(board.height):
-        for c in range(board.width):
-            # if board.get(r, c) == "P" or board.get(r, c) == "L":
-            #     board.set(r, c, "O")
-            1
+    for r, c, direction in board.emitters():
+        for cell in simulate_laser(board, direction, (r, c)):
+            hits[cell] = hits.get(cell, 0) + 1
+
+    for (r, c), count in hits.items():
+        if board.get(r, c) in "123456":
+            continue
+
+        if count == 2:
+            board.set(r, c, "M")
+        elif count >= 3:
+            board.set(r, c, "O")
 
     return board
 
@@ -138,7 +135,7 @@ def main(input_filename, output_filename="output"):
 
         n = int(next_nonempty_line())
 
-        with open(output_filename, "w") as outfile:
+        with open(output_filename, "w", newline="\n") as outfile:
             for i in range(n):
                 radius, rows, cols = map(
                     int, next_nonempty_line().split()
@@ -160,6 +157,8 @@ def main(input_filename, output_filename="output"):
 
                 outfile.write("\n".join(result.to_rows()) + "\n")
 
+            outfile.write("\n")
+
 
 if __name__ == "__main__":
-    main("./level-3/in_level-3_0-example.txt")
+    main("./level-3/in_level-3_2-large.txt")
